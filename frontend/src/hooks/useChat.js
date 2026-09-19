@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import { sendChatMessage } from '../api/chat'
-import { getSessionId } from '../lib/session'
+import { getSessionId, startNewSession } from '../lib/session'
 
 function createMessage(role, text, { events = [], isError = false } = {}) {
   return { id: crypto.randomUUID(), role, text, events, isError }
@@ -13,6 +13,11 @@ export function useChat() {
 
   const append = useCallback((message) => {
     setMessages((current) => [...current, message])
+  }, [])
+
+  const newChat = useCallback(() => {
+    startNewSession()
+    setMessages([])
   }, [])
 
   const send = useCallback(
@@ -38,5 +43,5 @@ export function useChat() {
     [append, isSending],
   )
 
-  return { messages, isSending, send }
+  return { messages, isSending, send, newChat }
 }

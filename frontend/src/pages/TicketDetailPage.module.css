@@ -1,0 +1,19 @@
+.back {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: var(--accent);
+}
+
+.heading {
+  margin-bottom: 20px;
+}
+
+.heading h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.heading span {
+  color: var(--text-muted);
+  font-size: 13px;
+}

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 
@@ -22,10 +24,33 @@ class EventSearchResult(BaseModel):
 
 class ChatRequest(BaseModel):
     message: str = Field(min_length=1)
-    session_id: str = Field(default="default")
+    session_id: str = Field(default="default", min_length=1, max_length=64)
 
 
 class ChatResponse(BaseModel):
     response: str
     session_id: str
     events: list[EventItem] = Field(default_factory=list)
+
+
+class TicketSummary(BaseModel):
+    id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class TicketMessage(BaseModel):
+    id: str
+    role: str
+    content: str
+    events: list[EventItem] = Field(default_factory=list)
+    created_at: datetime
+
+
+class TicketDetail(BaseModel):
+    session_id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    messages: list[TicketMessage]

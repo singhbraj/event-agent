@@ -12,3 +12,16 @@ export function formatEventDate({ date, time }) {
     ...(time ? { hour: 'numeric', minute: '2-digit' } : {}),
   })
 }
+
+export function formatTimestamp(value) {
+  const stamp = new Date(value)
+  if (Number.isNaN(stamp.getTime())) return value
+
+  return stamp.toLocaleString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}

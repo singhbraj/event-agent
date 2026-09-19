@@ -10,6 +10,9 @@
 }
 
 .header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   border-bottom: 1px solid var(--border);
   padding-bottom: 12px;
 }
@@ -20,5 +23,22 @@
 }
 
 .thread {
+  display: flex;
   flex: 1;
+  flex-direction: column;
+}
+
+.nav {
+  display: flex;
+  gap: 16px;
+}
+
+.nav a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.nav a:hover,
+.nav .active {
+  color: var(--text);
 }

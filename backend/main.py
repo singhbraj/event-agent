@@ -1,9 +1,19 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import router
+from db import init_db
 
-app = FastAPI(title="event-agent-backend")
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    await init_db()
+    yield
+
+
+app = FastAPI(title="event-agent-backend", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
