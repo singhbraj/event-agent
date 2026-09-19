@@ -1,11 +1,61 @@
-from agent import llm, provider
+import json
+from datetime import date, datetime
+
+from agent import build_agent
+from providers import select_provider
+
+
+def format_when(event) -> str:
+    if not event.date:
+        return "Date TBA"
+
+    try:
+        day = date.fromisoformat(event.date).strftime("%a, %d %b %Y")
+    except ValueError:
+        day = event.date
+
+    if not event.time:
+        return day
+
+    try:
+        clock = datetime.strptime(event.time, "%H:%M:%S").strftime("%I:%M %p").lstrip("0")
+    except ValueError:
+        clock = event.time
+
+    return f"{day} at {clock}"
+
+
+def print_result(result) -> None:
+    for message in result["messages"]:
+        for call in getattr(message, "tool_calls", []) or []:
+            print(f"  searching {call['name']} {json.dumps(call['args'])}")
+
+    events_result = result.get("structured_response")
+    if events_result is None:
+        print(result["messages"][-1].content)
+        return
+
+    print(f"\n{events_result.summary}\n")
+    for index, event in enumerate(events_result.events, start=1):
+        location = ", ".join(part for part in (event.venue, event.city) if part)
+        print(f"  {index}. {event.name}")
+        if location:
+            print(f"     {location}")
+        print(f"     {format_when(event)}")
+        if event.url:
+            print(f"     {event.url}")
+        print()
 
 
 def main() -> None:
-    print(f"Using {provider.name} ({provider.model}). Type quit or exit to stop.")
+    provider = select_provider()
+    agent = build_agent()
+    print(f"Event agent ready using {provider.name} ({provider.model}).")
+    print("Ask about events, or type quit to exit.")
+
     while True:
         try:
-            user_input = input("> ").strip()
+            user_input = input("\nYou: ").strip()
         except (EOFError, KeyboardInterrupt):
             print()
             break
@@ -13,8 +63,8 @@ def main() -> None:
         if not user_input or user_input.lower() in {"quit", "exit"}:
             break
 
-        response = llm.invoke(user_input)
-        print(response.content)
+        result = agent.invoke({"messages": [{"role": "user", "content": user_input}]})
+        print_result(result)
 
 
 if __name__ == "__main__":
