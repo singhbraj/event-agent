@@ -1,0 +1,24 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: min(720px, 100%);
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: 24px 16px;
+  box-sizing: border-box;
+}
+
+.header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 12px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.thread {
+  flex: 1;
+}

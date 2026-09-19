@@ -1,0 +1,16 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.empty {
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.pending {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 14px;
+}

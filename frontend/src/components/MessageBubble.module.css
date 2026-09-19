@@ -1,0 +1,38 @@
+.bubble {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.user {
+  align-self: flex-end;
+  max-width: 80%;
+  background: var(--text);
+  border-color: var(--text);
+  color: var(--surface);
+}
+
+.agent {
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.error {
+  align-self: flex-start;
+  border-color: var(--danger-border);
+  background: var(--danger-bg);
+  color: var(--danger);
+}
+
+.text {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.events {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}

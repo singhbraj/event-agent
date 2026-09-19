@@ -1,0 +1,28 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.name {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.meta {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.link {
+  margin-top: 4px;
+  width: fit-content;
+  font-size: 14px;
+  color: var(--accent);
+}

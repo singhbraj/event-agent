@@ -18,3 +18,14 @@ class EventSearchResult(BaseModel):
         default_factory=list,
         description="Events to show the user",
     )
+
+
+class ChatRequest(BaseModel):
+    message: str = Field(min_length=1)
+    session_id: str = Field(default="default")
+
+
+class ChatResponse(BaseModel):
+    response: str
+    session_id: str
+    events: list[EventItem] = Field(default_factory=list)
