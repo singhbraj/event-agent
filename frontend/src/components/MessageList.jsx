@@ -1,13 +1,7 @@
 import MessageBubble from './MessageBubble'
 import styles from './MessageList.module.css'
 
-export default function MessageList({
-  messages,
-  isSending,
-  status,
-  onApprove,
-  onReject,
-}) {
+export default function MessageList({ messages, isSending, onApprove, onReject }) {
   if (messages.length === 0 && !isSending) {
     return (
       <p className={styles.empty}>
@@ -26,9 +20,7 @@ export default function MessageList({
           onReject={onReject}
         />
       ))}
-      {isSending && (
-        <p className={styles.pending}>{status || 'Searching for events...'}</p>
-      )}
+      {isSending && <p className={styles.pending}>Searching for events...</p>}
     </div>
   )
 }

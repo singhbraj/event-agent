@@ -1,8 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from api import sse
 from db import get_db
 from models.schemas import (
     ApprovalRequest,
@@ -18,7 +16,6 @@ from services.conversation import (
     build_turn_payload,
     resume_turn,
     run_turn,
-    stream_turn,
 )
 from services.tickets import get_ticket_messages, list_tickets
 from services.ticketmaster import TicketmasterError, get_event, search_events
@@ -87,21 +84,26 @@ async def chat(
     return _chat_response(result)
 
 
-@router.post("/chat/stream")
-async def chat_stream(request: ChatRequest) -> StreamingResponse:
-    async def persist(result) -> None:
-        await enqueue_turn(build_turn_payload(result, user_message=request.message))
+async def _decide(
+    request: ApprovalRequest,
+    background_tasks: BackgroundTasks,
+    *,
+    approved: bool,
+) -> ChatResponse:
+    try:
+        result = await resume_turn(
+            session_id=request.session_id,
+            action_id=request.action_id,
+            approved=approved,
+        )
+    except BookingDecisionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
 
-    updates = stream_turn(
-        message=request.message,
-        session_id=request.session_id,
+    background_tasks.add_task(
+        enqueue_turn,
+        build_turn_payload(result, user_message="Approve" if approved else "Reject"),
     )
-
-    return StreamingResponse(
-        sse.event_stream(updates, on_result=persist),
-        media_type=sse.MEDIA_TYPE,
-        headers=sse.SSE_HEADERS,
-    )
+    return _chat_response(result)
 
 
 @router.post("/approve")
@@ -109,20 +111,7 @@ async def approve(
     request: ApprovalRequest,
     background_tasks: BackgroundTasks,
 ) -> ChatResponse:
-    try:
-        result = await resume_turn(
-            session_id=request.session_id,
-            action_id=request.action_id,
-            approved=True,
-        )
-    except BookingDecisionError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-
-    background_tasks.add_task(
-        enqueue_turn,
-        build_turn_payload(result, user_message="Approve"),
-    )
-    return _chat_response(result)
+    return await _decide(request, background_tasks, approved=True)
 
 
 @router.post("/reject")
@@ -130,20 +119,7 @@ async def reject(
     request: ApprovalRequest,
     background_tasks: BackgroundTasks,
 ) -> ChatResponse:
-    try:
-        result = await resume_turn(
-            session_id=request.session_id,
-            action_id=request.action_id,
-            approved=False,
-        )
-    except BookingDecisionError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
-
-    background_tasks.add_task(
-        enqueue_turn,
-        build_turn_payload(result, user_message="Reject"),
-    )
-    return _chat_response(result)
+    return await _decide(request, background_tasks, approved=False)
 
 
 @router.get("/tickets", response_model=list[TicketSummary])

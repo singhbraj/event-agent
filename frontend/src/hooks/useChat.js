@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 
-import { decideBooking, streamChatMessage } from '../api/chat'
+import { decideBooking, sendChatMessage } from '../api/chat'
 import { getSessionId, startNewSession } from '../lib/session'
 
 function createMessage(
@@ -20,20 +20,9 @@ function createMessage(
   }
 }
 
-function describeStatus(status) {
-  if (status.stage === 'tool') {
-    if (status.tool === 'get_event_details_tool') return 'Loading event details...'
-    if (status.tool === 'proceed_to_booking') return 'Preparing booking...'
-    return 'Searching for events...'
-  }
-  if (status.stage === 'writing') return 'Writing the answer...'
-  return 'Thinking...'
-}
-
 export function useChat() {
   const [messages, setMessages] = useState([])
   const [isSending, setIsSending] = useState(false)
-  const [status, setStatus] = useState('')
 
   const append = useCallback((message) => {
     setMessages((current) => [...current, message])
@@ -51,13 +40,11 @@ export function useChat() {
 
       append(createMessage('user', text))
       setIsSending(true)
-      setStatus('Thinking...')
 
       try {
-        const reply = await streamChatMessage({
+        const reply = await sendChatMessage({
           message: text,
           sessionId: getSessionId(),
-          onStatus: (update) => setStatus(describeStatus(update)),
         })
         append(
           createMessage('agent', reply.text, {
@@ -70,7 +57,6 @@ export function useChat() {
         append(createMessage('agent', error.message, { isError: true }))
       } finally {
         setIsSending(false)
-        setStatus('')
       }
     },
     [append, isSending],
@@ -127,7 +113,6 @@ export function useChat() {
   return {
     messages,
     isSending,
-    status,
     send,
     newChat,
     approve: (actionId) => decide(true, actionId),
