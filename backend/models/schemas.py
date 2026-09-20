@@ -4,12 +4,17 @@ from pydantic import BaseModel, Field
 
 
 class EventItem(BaseModel):
+    id: str | None = Field(default=None, description="Ticketmaster event id")
     name: str = Field(description="Event or artist name")
     venue: str | None = Field(default=None, description="Venue name")
     city: str | None = Field(default=None, description="City where the event is held")
     date: str | None = Field(default=None, description="Local start date as YYYY-MM-DD")
     time: str | None = Field(default=None, description="Local start time as HH:MM:SS")
     url: str | None = Field(default=None, description="Ticket or event URL")
+    info: str | None = Field(default=None, description="Event description or notes")
+    price: str | None = Field(default=None, description="Ticket price range")
+    genre: str | None = Field(default=None, description="Event genre")
+    address: str | None = Field(default=None, description="Venue street address")
 
 
 class EventSearchResult(BaseModel):

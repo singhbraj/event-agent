@@ -4,7 +4,7 @@ import { useChat } from '../hooks/useChat'
 import styles from './ChatPage.module.css'
 
 export default function ChatPage() {
-  const { messages, isSending, send, newChat } = useChat()
+  const { messages, isSending, status, send, newChat } = useChat()
 
   return (
     <div className={styles.page}>
@@ -21,7 +21,11 @@ export default function ChatPage() {
       </div>
 
       <div className={styles.thread}>
-        <MessageList messages={messages} isSending={isSending} />
+        <MessageList
+          messages={messages}
+          isSending={isSending}
+          status={status}
+        />
       </div>
 
       <Composer onSend={send} disabled={isSending} />

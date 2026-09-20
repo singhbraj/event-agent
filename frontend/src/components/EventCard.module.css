@@ -20,6 +20,13 @@
   color: var(--text-muted);
 }
 
+.info {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 .link {
   margin-top: 4px;
   width: fit-content;

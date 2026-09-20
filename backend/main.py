@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -9,6 +10,7 @@ from db import init_db
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    logging.basicConfig(level=logging.INFO)
     await init_db()
     yield
 

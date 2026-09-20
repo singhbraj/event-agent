@@ -1,11 +1,8 @@
-from datetime import datetime, timezone
-from uuid import uuid4
-
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
-from langgraph.checkpoint.memory import InMemorySaver
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from agent import build_agent
+from api import sse
 from db import get_db
 from models.schemas import (
     ChatRequest,
@@ -14,13 +11,12 @@ from models.schemas import (
     TicketMessage,
     TicketSummary,
 )
+from services.conversation import build_turn_payload, run_turn, stream_turn
 from services.tickets import get_ticket_messages, list_tickets
-from services.ticketmaster import TicketmasterError, search_events
+from services.ticketmaster import TicketmasterError, get_event, search_events
 from task_queue import enqueue_turn
 
 router = APIRouter()
-
-agent = build_agent(checkpointer=InMemorySaver())
 
 
 @router.get("/ping")
@@ -32,11 +28,27 @@ def ping() -> dict[str, str]:
 def get_events(
     keyword: str = Query(..., min_length=1),
     city: str = Query(..., min_length=1),
+    start_date: str | None = Query(default=None),
+    end_date: str | None = Query(default=None),
 ) -> dict:
     try:
-        return search_events(keyword=keyword, city=city)
+        return search_events(
+            keyword=keyword,
+            city=city,
+            start_date=start_date,
+            end_date=end_date,
+        )
     except TicketmasterError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
+
+
+@router.get("/events/{event_id}")
+def get_event_details(event_id: str) -> dict:
+    try:
+        return get_event(event_id=event_id)
+    except TicketmasterError as exc:
+        status_code = 404 if "was not found" in str(exc) else 502
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
 
 
 @router.post("/chat")
@@ -44,40 +56,37 @@ async def chat(
     request: ChatRequest,
     background_tasks: BackgroundTasks,
 ) -> ChatResponse:
-    user_created_at = datetime.now(timezone.utc)
-    result = await agent.ainvoke(
-        {"messages": [{"role": "user", "content": request.message}]},
-        {"configurable": {"thread_id": request.session_id}},
+    result = await run_turn(
+        message=request.message,
+        session_id=request.session_id,
     )
-    agent_created_at = datetime.now(timezone.utc)
-
-    events_result = result.get("structured_response")
-    if events_result is None:
-        response_text = result["messages"][-1].content
-        response_events = []
-    else:
-        response_text = events_result.summary
-        response_events = events_result.events
 
     background_tasks.add_task(
         enqueue_turn,
-        {
-            "turn_id": str(uuid4()),
-            "session_id": request.session_id,
-            "user_message": request.message,
-            "agent_message": response_text,
-            "events": [
-                event.model_dump(mode="json") for event in response_events
-            ],
-            "user_created_at": user_created_at.isoformat(),
-            "agent_created_at": agent_created_at.isoformat(),
-        },
+        build_turn_payload(result, user_message=request.message),
     )
 
     return ChatResponse(
-        response=response_text,
+        response=result.text,
+        session_id=result.session_id,
+        events=result.events,
+    )
+
+
+@router.post("/chat/stream")
+async def chat_stream(request: ChatRequest) -> StreamingResponse:
+    async def persist(result) -> None:
+        await enqueue_turn(build_turn_payload(result, user_message=request.message))
+
+    updates = stream_turn(
+        message=request.message,
         session_id=request.session_id,
-        events=response_events,
+    )
+
+    return StreamingResponse(
+        sse.event_stream(updates, on_result=persist),
+        media_type=sse.MEDIA_TYPE,
+        headers=sse.SSE_HEADERS,
     )
 
 
