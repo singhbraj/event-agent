@@ -1,7 +1,8 @@
+import ApprovalCard from './ApprovalCard'
 import EventCard from './EventCard'
 import styles from './MessageBubble.module.css'
 
-export default function MessageBubble({ message }) {
+export default function MessageBubble({ message, onApprove, onReject }) {
   const tone = message.isError ? styles.error : styles[message.role]
 
   return (
@@ -13,6 +14,24 @@ export default function MessageBubble({ message }) {
             <EventCard key={`${event.name}-${event.date}-${index}`} event={event} />
           ))}
         </div>
+      )}
+      {message.bookingUrl && (
+        <a
+          className={styles.link}
+          href={message.bookingUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          Continue to Ticketmaster
+        </a>
+      )}
+      {message.pendingBooking && (
+        <ApprovalCard
+          booking={message.pendingBooking}
+          disabled={message.decisionPending}
+          onApprove={() => onApprove?.(message.pendingBooking.action_id)}
+          onReject={() => onReject?.(message.pendingBooking.action_id)}
+        />
       )}
     </div>
   )

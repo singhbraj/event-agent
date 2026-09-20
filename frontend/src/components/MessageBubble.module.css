@@ -36,3 +36,10 @@
   gap: 8px;
   margin-top: 12px;
 }
+
+.link {
+  margin-top: 10px;
+  width: fit-content;
+  font-size: 14px;
+  color: var(--accent);
+}

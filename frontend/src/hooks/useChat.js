@@ -1,17 +1,30 @@
 import { useCallback, useState } from 'react'
 
-import { streamChatMessage } from '../api/chat'
+import { decideBooking, streamChatMessage } from '../api/chat'
 import { getSessionId, startNewSession } from '../lib/session'
 
-function createMessage(role, text, { events = [], isError = false } = {}) {
-  return { id: crypto.randomUUID(), role, text, events, isError }
+function createMessage(
+  role,
+  text,
+  { events = [], isError = false, pendingBooking = null, bookingUrl = null } = {},
+) {
+  return {
+    id: crypto.randomUUID(),
+    role,
+    text,
+    events,
+    isError,
+    pendingBooking,
+    bookingUrl,
+    decisionPending: false,
+  }
 }
 
 function describeStatus(status) {
   if (status.stage === 'tool') {
-    return status.tool === 'get_event_details_tool'
-      ? 'Loading event details...'
-      : 'Searching for events...'
+    if (status.tool === 'get_event_details_tool') return 'Loading event details...'
+    if (status.tool === 'proceed_to_booking') return 'Preparing booking...'
+    return 'Searching for events...'
   }
   if (status.stage === 'writing') return 'Writing the answer...'
   return 'Thinking...'
@@ -46,7 +59,13 @@ export function useChat() {
           sessionId: getSessionId(),
           onStatus: (update) => setStatus(describeStatus(update)),
         })
-        append(createMessage('agent', reply.text, { events: reply.events }))
+        append(
+          createMessage('agent', reply.text, {
+            events: reply.events,
+            pendingBooking: reply.pendingBooking,
+            bookingUrl: reply.bookingUrl,
+          }),
+        )
       } catch (error) {
         append(createMessage('agent', error.message, { isError: true }))
       } finally {
@@ -57,5 +76,61 @@ export function useChat() {
     [append, isSending],
   )
 
-  return { messages, isSending, status, send, newChat }
+  const decide = useCallback(
+    async (approved, actionId) => {
+      if (isSending) return
+
+      setMessages((current) =>
+        current.map((message) =>
+          message.pendingBooking?.action_id === actionId
+            ? { ...message, decisionPending: true }
+            : message,
+        ),
+      )
+      setIsSending(true)
+
+      try {
+        const reply = await decideBooking({
+          approved,
+          sessionId: getSessionId(),
+          actionId,
+        })
+        setMessages((current) =>
+          current.map((message) =>
+            message.pendingBooking?.action_id === actionId
+              ? { ...message, pendingBooking: null, decisionPending: false }
+              : message,
+          ),
+        )
+        append(
+          createMessage('agent', reply.text, {
+            events: reply.events,
+            bookingUrl: reply.bookingUrl,
+          }),
+        )
+      } catch (error) {
+        setMessages((current) =>
+          current.map((message) =>
+            message.pendingBooking?.action_id === actionId
+              ? { ...message, decisionPending: false }
+              : message,
+          ),
+        )
+        append(createMessage('agent', error.message, { isError: true }))
+      } finally {
+        setIsSending(false)
+      }
+    },
+    [append, isSending],
+  )
+
+  return {
+    messages,
+    isSending,
+    status,
+    send,
+    newChat,
+    approve: (actionId) => decide(true, actionId),
+    reject: (actionId) => decide(false, actionId),
+  }
 }

@@ -1,3 +1,4 @@
+from tools.booking_tool import proceed_to_booking
 from tools.events_tool import (
     get_event_details_tool,
     search_events_by_date_tool,
@@ -13,6 +14,7 @@ ALL_TOOLS = [
     get_event_details_tool,
     search_venues_tool,
     get_venue_details_tool,
+    proceed_to_booking,
 ]
 
 __all__ = [
@@ -23,4 +25,5 @@ __all__ = [
     "get_event_details_tool",
     "search_venues_tool",
     "get_venue_details_tool",
+    "proceed_to_booking",
 ]

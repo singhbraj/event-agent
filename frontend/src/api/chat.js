@@ -16,18 +16,34 @@ function mapEvents(events) {
   }))
 }
 
+function mapReply(data) {
+  return {
+    text: data.response,
+    sessionId: data.session_id,
+    events: mapEvents(data.events),
+    pendingBooking: data.pending_booking ?? null,
+    bookingUrl: data.booking_url ?? null,
+    timings: data.timings,
+  }
+}
+
 export async function sendChatMessage({ message, sessionId, signal }) {
   const data = await postJson(
     '/chat',
     { message, session_id: sessionId },
     { signal },
   )
+  return mapReply(data)
+}
 
-  return {
-    text: data.response,
-    sessionId: data.session_id,
-    events: mapEvents(data.events),
-  }
+export async function decideBooking({ approved, sessionId, actionId, signal }) {
+  const path = approved ? '/approve' : '/reject'
+  const data = await postJson(
+    path,
+    { session_id: sessionId, action_id: actionId },
+    { signal },
+  )
+  return mapReply(data)
 }
 
 function parseFrame(frame) {
@@ -89,12 +105,7 @@ export async function streamChatMessage({
       if (parsed.event === 'status') {
         onStatus?.(parsed.data)
       } else if (parsed.event === 'result') {
-        result = {
-          text: parsed.data.response,
-          sessionId: parsed.data.session_id,
-          events: mapEvents(parsed.data.events),
-          timings: parsed.data.timings,
-        }
+        result = mapReply(parsed.data)
       }
     }
   }

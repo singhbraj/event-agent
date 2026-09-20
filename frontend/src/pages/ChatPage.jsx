@@ -4,7 +4,7 @@ import { useChat } from '../hooks/useChat'
 import styles from './ChatPage.module.css'
 
 export default function ChatPage() {
-  const { messages, isSending, status, send, newChat } = useChat()
+  const { messages, isSending, status, send, newChat, approve, reject } = useChat()
 
   return (
     <div className={styles.page}>
@@ -25,6 +25,8 @@ export default function ChatPage() {
           messages={messages}
           isSending={isSending}
           status={status}
+          onApprove={approve}
+          onReject={reject}
         />
       </div>
 

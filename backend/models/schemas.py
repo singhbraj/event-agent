@@ -17,6 +17,16 @@ class EventItem(BaseModel):
     address: str | None = Field(default=None, description="Venue street address")
 
 
+class PendingBooking(BaseModel):
+    action_id: str
+    name: str
+    venue: str | None = None
+    city: str | None = None
+    date: str | None = None
+    time: str | None = None
+    price: str | None = None
+
+
 class EventSearchResult(BaseModel):
     summary: str = Field(
         description="Short intro for the user, e.g. 'Here are some events I found'"
@@ -32,10 +42,17 @@ class ChatRequest(BaseModel):
     session_id: str = Field(default="default", min_length=1, max_length=64)
 
 
+class ApprovalRequest(BaseModel):
+    session_id: str = Field(min_length=1, max_length=64)
+    action_id: str = Field(min_length=1)
+
+
 class ChatResponse(BaseModel):
     response: str
     session_id: str
     events: list[EventItem] = Field(default_factory=list)
+    pending_booking: PendingBooking | None = None
+    booking_url: str | None = None
 
 
 class TicketSummary(BaseModel):

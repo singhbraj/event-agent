@@ -12,16 +12,6 @@ export default function EventCard({ event }) {
       <p className={styles.meta}>{formatEventDate(event)}</p>
       {event.price && <p className={styles.meta}>{event.price}</p>}
       {event.info && <p className={styles.info}>{event.info}</p>}
-      {event.url && (
-        <a
-          className={styles.link}
-          href={event.url}
-          target="_blank"
-          rel="noreferrer"
-        >
-          View tickets
-        </a>
-      )}
     </article>
   )
 }

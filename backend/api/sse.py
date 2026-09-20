@@ -26,15 +26,19 @@ def encode(update: TurnUpdate) -> str:
     if isinstance(update, ToolFinished):
         return frame("status", {"stage": "writing", "elapsed": update.elapsed})
 
-    return frame(
-        "result",
-        {
-            "response": update.text,
-            "session_id": update.session_id,
-            "events": [event.model_dump(mode="json") for event in update.events],
-            "timings": update.timings,
-        },
-    )
+    payload = {
+        "response": update.text,
+        "session_id": update.session_id,
+        "events": [event.model_dump(mode="json") for event in update.events],
+        "timings": update.timings,
+        "pending_booking": (
+            update.pending_booking.model_dump(mode="json")
+            if update.pending_booking
+            else None
+        ),
+        "booking_url": update.booking_url,
+    }
+    return frame("result", payload)
 
 
 async def event_stream(
@@ -48,6 +52,11 @@ async def event_stream(
     async for update in updates:
         if isinstance(update, TurnResult):
             result = update
+            if update.pending_booking is not None:
+                yield frame(
+                    "approval",
+                    update.pending_booking.model_dump(mode="json"),
+                )
         yield encode(update)
 
     if result is not None and on_result is not None:

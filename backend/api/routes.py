@@ -5,18 +5,36 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api import sse
 from db import get_db
 from models.schemas import (
+    ApprovalRequest,
     ChatRequest,
     ChatResponse,
     TicketDetail,
     TicketMessage,
     TicketSummary,
 )
-from services.conversation import build_turn_payload, run_turn, stream_turn
+from services.conversation import (
+    BookingDecisionError,
+    TurnResult,
+    build_turn_payload,
+    resume_turn,
+    run_turn,
+    stream_turn,
+)
 from services.tickets import get_ticket_messages, list_tickets
 from services.ticketmaster import TicketmasterError, get_event, search_events
 from task_queue import enqueue_turn
 
 router = APIRouter()
+
+
+def _chat_response(result: TurnResult) -> ChatResponse:
+    return ChatResponse(
+        response=result.text,
+        session_id=result.session_id,
+        events=result.events,
+        pending_booking=result.pending_booking,
+        booking_url=result.booking_url,
+    )
 
 
 @router.get("/ping")
@@ -66,11 +84,7 @@ async def chat(
         build_turn_payload(result, user_message=request.message),
     )
 
-    return ChatResponse(
-        response=result.text,
-        session_id=result.session_id,
-        events=result.events,
-    )
+    return _chat_response(result)
 
 
 @router.post("/chat/stream")
@@ -88,6 +102,48 @@ async def chat_stream(request: ChatRequest) -> StreamingResponse:
         media_type=sse.MEDIA_TYPE,
         headers=sse.SSE_HEADERS,
     )
+
+
+@router.post("/approve")
+async def approve(
+    request: ApprovalRequest,
+    background_tasks: BackgroundTasks,
+) -> ChatResponse:
+    try:
+        result = await resume_turn(
+            session_id=request.session_id,
+            action_id=request.action_id,
+            approved=True,
+        )
+    except BookingDecisionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    background_tasks.add_task(
+        enqueue_turn,
+        build_turn_payload(result, user_message="Approve"),
+    )
+    return _chat_response(result)
+
+
+@router.post("/reject")
+async def reject(
+    request: ApprovalRequest,
+    background_tasks: BackgroundTasks,
+) -> ChatResponse:
+    try:
+        result = await resume_turn(
+            session_id=request.session_id,
+            action_id=request.action_id,
+            approved=False,
+        )
+    except BookingDecisionError as exc:
+        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+
+    background_tasks.add_task(
+        enqueue_turn,
+        build_turn_payload(result, user_message="Reject"),
+    )
+    return _chat_response(result)
 
 
 @router.get("/tickets", response_model=list[TicketSummary])
