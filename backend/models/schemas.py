@@ -18,7 +18,6 @@ class EventItem(BaseModel):
 
 
 class PendingBooking(BaseModel):
-    action_id: str
     name: str
     venue: str | None = None
     city: str | None = None
@@ -44,7 +43,6 @@ class ChatRequest(BaseModel):
 
 class ApprovalRequest(BaseModel):
     session_id: str = Field(min_length=1, max_length=64)
-    action_id: str = Field(min_length=1)
 
 
 class ChatResponse(BaseModel):

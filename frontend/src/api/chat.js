@@ -35,12 +35,8 @@ export async function sendChatMessage({ message, sessionId, signal }) {
   return mapReply(data)
 }
 
-export async function decideBooking({ approved, sessionId, actionId, signal }) {
+export async function decideBooking({ approved, sessionId, signal }) {
   const path = approved ? '/approve' : '/reject'
-  const data = await postJson(
-    path,
-    { session_id: sessionId, action_id: actionId },
-    { signal },
-  )
+  const data = await postJson(path, { session_id: sessionId }, { signal })
   return mapReply(data)
 }

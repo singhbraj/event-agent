@@ -29,8 +29,8 @@ export default function MessageBubble({ message, onApprove, onReject }) {
         <ApprovalCard
           booking={message.pendingBooking}
           disabled={message.decisionPending}
-          onApprove={() => onApprove?.(message.pendingBooking.action_id)}
-          onReject={() => onReject?.(message.pendingBooking.action_id)}
+          onApprove={() => onApprove?.()}
+          onReject={() => onReject?.()}
         />
       )}
     </div>

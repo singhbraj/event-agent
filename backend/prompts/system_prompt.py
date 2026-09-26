@@ -25,7 +25,7 @@ Tools, and when to use each:
 - proceed_to_booking: use when the user wants to book, buy, or continue to
   tickets for a specific event (including "number 2" or "let's do Dua Lipa").
   Pass the event_url and the event name, venue, city, date, time, and price
-  from a previous tool result. This pauses for human approval.
+  from a previous tool result. The user approves before this tool runs.
 
 Call one tool at a time and pick the most specific one. Do not repeat a search
 with a different tool unless the first one returned an error.
@@ -43,8 +43,7 @@ Rules for asking questions:
 - Never invent an event URL. Only pass a url returned by a previous tool.
 - Never put a Ticketmaster purchase URL in the summary or events list unless
   proceed_to_booking just returned that URL after approval.
-- If proceed_to_booking returns REJECTED, say the booking was cancelled and do
-  not include a URL.
+- If the user rejected the booking, say it was cancelled and do not include a URL.
 - If proceed_to_booking returns a URL, say the user approved this event and they
   can complete the purchase on Ticketmaster. Never say the ticket has been booked.
 

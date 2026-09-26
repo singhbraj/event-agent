@@ -1,140 +1,45 @@
-import json
-from datetime import date, datetime
+"""Terminal version of the chat. Same turns as the web app, approval asked with y/n."""
 
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.types import Command
+import asyncio
 
-from agent import build_agent
 from providers import select_provider
+from runtime import TurnResult, resume_turn, start_turn
+
+THREAD_ID = "cli"
 
 
-def format_when(event) -> str:
-    if not event.date:
-        return "Date TBA"
-
-    try:
-        day = date.fromisoformat(event.date).strftime("%a, %d %b %Y")
-    except ValueError:
-        day = event.date
-
-    if not event.time:
-        return day
-
-    try:
-        clock = datetime.strptime(event.time, "%H:%M:%S").strftime("%I:%M %p").lstrip("0")
-    except ValueError:
-        clock = event.time
-
-    return f"{day} at {clock}"
+def ask_approval(result: TurnResult) -> bool:
+    booking = result.pending_booking
+    print("\n--- approval needed ---")
+    for detail in (booking.name, booking.venue, booking.city, booking.date, booking.time, booking.price):
+        if detail:
+            print(f"  {detail}")
+    return input("Continue to Ticketmaster? (y/N): ").strip().lower() in {"y", "yes"}
 
 
-def current_turn_messages(messages: list) -> list:
-    for index in range(len(messages) - 1, -1, -1):
-        if getattr(messages[index], "type", None) == "human":
-            return messages[index:]
-    return messages
+def show(result: TurnResult) -> None:
+    print(f"\nAgent: {result.text}")
+    for index, event in enumerate(result.events, start=1):
+        where = ", ".join(part for part in (event.venue, event.city) if part)
+        print(f"  {index}. {event.name} | {where} | {event.date or ''} {event.time or ''}")
+    if result.booking_url:
+        print(f"  Buy here: {result.booking_url}")
 
 
-def pending_booking(agent, thread) -> dict | None:
-    snapshot = agent.get_state(thread)
-    interrupts = getattr(snapshot, "interrupts", None) or ()
-    if not interrupts:
-        return None
-    payload = interrupts[0].value
-    return payload if isinstance(payload, dict) else None
-
-
-def print_pending(payload: dict) -> None:
-    print("\nYou selected:\n")
-    print(f"  {payload.get('name')}")
-    if payload.get("venue"):
-        print(f"  {payload['venue']}")
-    if payload.get("city"):
-        print(f"  {payload['city']}")
-    if payload.get("date"):
-        print(f"  {payload['date']}")
-    if payload.get("time"):
-        print(f"  {payload['time']}")
-    if payload.get("price"):
-        print(f"  {payload['price']}")
-    print("\nWould you like to continue to Ticketmaster to purchase the ticket?")
-    print("Type approve or reject.")
-
-
-def print_result(result) -> None:
-    tool_calls = [
-        call
-        for message in current_turn_messages(result["messages"])
-        for call in getattr(message, "tool_calls", []) or []
-    ]
-
-    if tool_calls:
-        print("\nTools called:")
-        for call in tool_calls:
-            args = dict(call["args"])
-            if call["name"] == "proceed_to_booking":
-                args.pop("event_url", None)
-            print(f"  {call['name']} {json.dumps(args)}")
-    else:
-        print("\nTools called: none")
-
-    events_result = result.get("structured_response")
-    if events_result is None:
-        print(result["messages"][-1].content)
-        return
-
-    print(f"\n{events_result.summary}\n")
-    for index, event in enumerate(events_result.events, start=1):
-        location = ", ".join(part for part in (event.venue, event.city) if part)
-        print(f"  {index}. {event.name}")
-        if location:
-            print(f"     {location}")
-        if event.address:
-            print(f"     {event.address}")
-        print(f"     {format_when(event)}")
-        if event.price:
-            print(f"     {event.price}")
-        if event.info:
-            print(f"     {event.info}")
-        print()
-
-
-def main() -> None:
+async def main() -> None:
     provider = select_provider()
-    agent = build_agent(checkpointer=InMemorySaver())
-    thread = {"configurable": {"thread_id": "cli"}}
-    print(f"Event agent ready using {provider.name} ({provider.model}).")
-    print("Ask about events, or type quit to exit.")
+    print(f"Event agent ready using {provider.name} ({provider.model}). Type quit to exit.")
 
     while True:
-        try:
-            user_input = input("\nYou: ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print()
+        message = input("\nYou: ").strip()
+        if not message or message.lower() in {"quit", "exit"}:
             break
 
-        if not user_input or user_input.lower() in {"quit", "exit"}:
-            break
-
-        waiting = pending_booking(agent, thread)
-        if waiting and user_input.lower() in {"approve", "reject"}:
-            result = agent.invoke(
-                Command(resume={"approved": user_input.lower() == "approve"}),
-                thread,
-            )
-            print_result(result)
-            continue
-
-        result = agent.invoke(
-            {"messages": [{"role": "user", "content": user_input}]},
-            thread,
-        )
-        waiting = pending_booking(agent, thread)
-        if waiting:
-            print_pending(waiting)
-            continue
-        print_result(result)
+        result = await start_turn(THREAD_ID, message)
+        while result.pending_booking is not None:
+            result = await resume_turn(THREAD_ID, approved=ask_approval(result))
+        show(result)
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

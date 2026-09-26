@@ -1,7 +1,4 @@
-from uuid import uuid4
-
 from langchain_core.tools import tool
-from langgraph.types import interrupt
 
 
 @tool
@@ -14,11 +11,11 @@ def proceed_to_booking(
     time: str | None = None,
     price: str | None = None,
 ) -> str:
-    """Prepare a Ticketmaster booking for one already-found event.
+    """Continue to Ticketmaster for one event the user already chose.
 
-    Call this when the user wants to book, buy, or continue to tickets for a
-    specific event from a previous search. This pauses for human approval.
-    Never paste the event URL in your reply until this tool has returned it.
+    Call this when the user wants to book, buy, or get tickets for a specific
+    event from a previous search. Approval happens before this tool runs.
+    Never paste the event URL in your reply. This tool returns it after approval.
 
     Args:
         event_url: Ticketmaster purchase URL from a previous search result.
@@ -29,18 +26,4 @@ def proceed_to_booking(
         time: Local start time as HH:MM:SS.
         price: Ticket price range if known.
     """
-    decision = interrupt(
-        {
-            "action_id": str(uuid4()),
-            "name": name,
-            "venue": venue,
-            "city": city,
-            "date": date,
-            "time": time,
-            "price": price,
-        }
-    )
-    approved = isinstance(decision, dict) and decision.get("approved") is True
-    if not approved:
-        return "REJECTED"
     return event_url

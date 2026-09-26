@@ -1,3 +1,6 @@
+from datetime import datetime, timezone
+from uuid import uuid4
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,13 +13,7 @@ from models.schemas import (
     TicketMessage,
     TicketSummary,
 )
-from services.conversation import (
-    BookingDecisionError,
-    TurnResult,
-    build_turn_payload,
-    resume_turn,
-    run_turn,
-)
+from runtime import NothingToApprove, TurnResult, resume_turn, start_turn
 from services.tickets import get_ticket_messages, list_tickets
 from services.ticketmaster import TicketmasterError, get_event, search_events
 from task_queue import enqueue_turn
@@ -24,10 +21,29 @@ from task_queue import enqueue_turn
 router = APIRouter()
 
 
-def _chat_response(result: TurnResult) -> ChatResponse:
+def _reply(
+    session_id: str,
+    user_message: str,
+    result: TurnResult,
+    started_at: datetime,
+    background_tasks: BackgroundTasks,
+) -> ChatResponse:
+    """Save the turn to Postgres in the background, then answer the browser."""
+    background_tasks.add_task(
+        enqueue_turn,
+        {
+            "turn_id": str(uuid4()),
+            "session_id": session_id,
+            "user_message": user_message,
+            "agent_message": result.text,
+            "events": [event.model_dump(mode="json") for event in result.events],
+            "user_created_at": started_at.isoformat(),
+            "agent_created_at": datetime.now(timezone.utc).isoformat(),
+        },
+    )
     return ChatResponse(
         response=result.text,
-        session_id=result.session_id,
+        session_id=session_id,
         events=result.events,
         pending_booking=result.pending_booking,
         booking_url=result.booking_url,
@@ -71,17 +87,9 @@ async def chat(
     request: ChatRequest,
     background_tasks: BackgroundTasks,
 ) -> ChatResponse:
-    result = await run_turn(
-        message=request.message,
-        session_id=request.session_id,
-    )
-
-    background_tasks.add_task(
-        enqueue_turn,
-        build_turn_payload(result, user_message=request.message),
-    )
-
-    return _chat_response(result)
+    started_at = datetime.now(timezone.utc)
+    result = await start_turn(request.session_id, request.message)
+    return _reply(request.session_id, request.message, result, started_at, background_tasks)
 
 
 async def _decide(
@@ -90,20 +98,14 @@ async def _decide(
     *,
     approved: bool,
 ) -> ChatResponse:
+    started_at = datetime.now(timezone.utc)
     try:
-        result = await resume_turn(
-            session_id=request.session_id,
-            action_id=request.action_id,
-            approved=approved,
-        )
-    except BookingDecisionError as exc:
-        raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
+        result = await resume_turn(request.session_id, approved)
+    except NothingToApprove as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
-    background_tasks.add_task(
-        enqueue_turn,
-        build_turn_payload(result, user_message="Approve" if approved else "Reject"),
-    )
-    return _chat_response(result)
+    label = "Approve" if approved else "Reject"
+    return _reply(request.session_id, label, result, started_at, background_tasks)
 
 
 @router.post("/approve")

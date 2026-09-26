@@ -63,14 +63,12 @@ export function useChat() {
   )
 
   const decide = useCallback(
-    async (approved, actionId) => {
+    async (approved) => {
       if (isSending) return
 
       setMessages((current) =>
         current.map((message) =>
-          message.pendingBooking?.action_id === actionId
-            ? { ...message, decisionPending: true }
-            : message,
+          message.pendingBooking ? { ...message, decisionPending: true } : message,
         ),
       )
       setIsSending(true)
@@ -79,11 +77,10 @@ export function useChat() {
         const reply = await decideBooking({
           approved,
           sessionId: getSessionId(),
-          actionId,
         })
         setMessages((current) =>
           current.map((message) =>
-            message.pendingBooking?.action_id === actionId
+            message.pendingBooking
               ? { ...message, pendingBooking: null, decisionPending: false }
               : message,
           ),
@@ -97,7 +94,7 @@ export function useChat() {
       } catch (error) {
         setMessages((current) =>
           current.map((message) =>
-            message.pendingBooking?.action_id === actionId
+            message.pendingBooking
               ? { ...message, decisionPending: false }
               : message,
           ),
@@ -115,7 +112,7 @@ export function useChat() {
     isSending,
     send,
     newChat,
-    approve: (actionId) => decide(true, actionId),
-    reject: (actionId) => decide(false, actionId),
+    approve: () => decide(true),
+    reject: () => decide(false),
   }
 }
