@@ -1,3 +1,16 @@
+export function eventDateBadge(date) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(date ?? '')
+  if (!match) return null
+
+  const stamp = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+  if (Number.isNaN(stamp.getTime())) return null
+
+  return {
+    month: stamp.toLocaleString(undefined, { month: 'short' }),
+    day: String(stamp.getDate()),
+  }
+}
+
 export function formatEventDate({ date, time }) {
   if (!date) return 'Date to be announced'
 

@@ -26,19 +26,24 @@ export default function TicketDetailPage() {
     return () => controller.abort()
   }, [ticketId])
 
-  if (status === 'loading') return <p>Loading ticket...</p>
-  if (status === 'error') return <p>Could not load this ticket.</p>
-
   return (
-    <section>
+    <section className={styles.page}>
       <Link className={styles.back} to="/tickets">
         Back to tickets
       </Link>
-      <div className={styles.heading}>
-        <h2>{ticket.title}</h2>
-        <span>Updated {formatTimestamp(ticket.updatedAt)}</span>
-      </div>
-      <MessageList messages={ticket.messages} isSending={false} />
+
+      {status === 'loading' && <p className={styles.state}>Loading ticket…</p>}
+      {status === 'error' && <p className={styles.state}>Could not load this ticket.</p>}
+
+      {status === 'ready' && (
+        <>
+          <div className={styles.heading}>
+            <h2>{ticket.title}</h2>
+            <span>Updated {formatTimestamp(ticket.updatedAt)}</span>
+          </div>
+          <MessageList messages={ticket.messages} isSending={false} />
+        </>
+      )}
     </section>
   )
 }

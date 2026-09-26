@@ -3,12 +3,26 @@ import EventCard from './EventCard'
 import styles from './MessageBubble.module.css'
 
 export default function MessageBubble({ message, onApprove, onReject }) {
-  const tone = message.isError ? styles.error : styles[message.role]
+  if (message.isError) {
+    return (
+      <div className={styles.error}>
+        <p className={styles.text}>{message.text}</p>
+      </div>
+    )
+  }
+
+  if (message.role === 'user') {
+    return (
+      <div className={styles.user}>
+        <p className={styles.text}>{message.text}</p>
+      </div>
+    )
+  }
 
   return (
-    <div className={`${styles.bubble} ${tone}`}>
-      <p className={styles.text}>{message.text}</p>
-      {message.events.length > 0 && (
+    <article className={styles.agent}>
+      {message.text && <p className={styles.text}>{message.text}</p>}
+      {message.events?.length > 0 && (
         <div className={styles.events}>
           {message.events.map((event, index) => (
             <EventCard key={`${event.name}-${event.date}-${index}`} event={event} />
@@ -33,6 +47,6 @@ export default function MessageBubble({ message, onApprove, onReject }) {
           onReject={() => onReject?.()}
         />
       )}
-    </div>
+    </article>
   )
 }

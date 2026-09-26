@@ -25,15 +25,18 @@ export default function TicketsPage() {
   }, [])
 
   return (
-    <section>
-      <h2 className={styles.title}>Tickets</h2>
+    <section className={styles.page}>
+      <header className={styles.header}>
+        <h2 className={styles.title}>Tickets</h2>
+        <p className={styles.subtitle}>Conversations you can reopen.</p>
+      </header>
 
-      {status === 'loading' && <p className={styles.state}>Loading tickets...</p>}
+      {status === 'loading' && <p className={styles.state}>Loading tickets…</p>}
       {status === 'error' && (
-        <p className={styles.state}>Could not load tickets.</p>
+        <p className={styles.state}>Could not load tickets. Check that the server is running.</p>
       )}
       {status === 'ready' && tickets.length === 0 && (
-        <p className={styles.state}>No saved conversations yet.</p>
+        <p className={styles.state}>No saved conversations yet. Start one from Chat.</p>
       )}
 
       <div className={styles.list}>

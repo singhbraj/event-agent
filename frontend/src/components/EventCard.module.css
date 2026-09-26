@@ -1,35 +1,114 @@
 .card {
+  display: grid;
+  grid-template-columns: 68px 1fr;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+}
+
+.badge {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface);
+  align-items: center;
+  justify-content: center;
+  min-height: 68px;
+  border-radius: 12px;
+  background: var(--surface-2);
+}
+
+.badge span {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.badge strong {
+  font-family: var(--serif);
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.tba {
+  letter-spacing: 0.06em;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.titleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .name {
   margin: 0;
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
+  line-height: 1.3;
+}
+
+.genre {
+  flex: none;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-soft);
+  font-size: 12px;
 }
 
 .meta {
   margin: 0;
-  font-size: 14px;
-  color: var(--text-muted);
-}
-
-.info {
-  margin: 4px 0 0;
+  color: var(--muted);
   font-size: 13px;
-  color: var(--text-muted);
   line-height: 1.4;
 }
 
-.link {
-  margin-top: 4px;
-  width: fit-content;
-  font-size: 14px;
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.price {
+  margin: 0;
   color: var(--accent);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.info {
+  display: -webkit-box;
+  margin: 6px 0 0;
+  overflow: hidden;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+@media (max-width: 640px) {
+  .card {
+    grid-template-columns: 56px 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .badge strong {
+    font-size: 24px;
+  }
 }
